@@ -19,8 +19,6 @@ import commandLineArgs, { CommandLineOptions } from 'command-line-args';
       path: path.join(__dirname, `env/${options.env as string}.env`),
     });
 
-    console.log(options.env, result2);
-
     if (result2.error) {
       throw result2.error;
     }
