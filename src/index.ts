@@ -140,6 +140,12 @@ wsServer.on('request', function (request: any) {
                 .toArray()
             )[0];
 
+            if (!clients[user]) {
+              clients[user_id] = [];
+
+              clients[user_id].push(connection);
+            }
+
             if (chat) {
               const { messages } = chat;
 
@@ -149,12 +155,6 @@ wsServer.on('request', function (request: any) {
                 { participants: { $all: [receiver, user] } },
                 { $set: { messages } }
               );
-
-              if (!clients[user_id]) {
-                clients[user_id] = [];
-
-                clients[user_id].push(connection);
-              }
 
               clients[user_id].forEach((item) =>
                 item.sendUTF(JSON.stringify({ status: 201 }))
