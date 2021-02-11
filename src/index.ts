@@ -59,7 +59,6 @@ wsServer.on('request', function (request: any) {
             }
 
             clients[user_id].push(connection);
-            console.log(clients[user_id]);
           }
           break;
 
@@ -157,12 +156,20 @@ wsServer.on('request', function (request: any) {
               );
 
               clients[user_id].forEach((item) =>
-                item.sendUTF(JSON.stringify({ status: 201 }))
+                item.sendUTF(
+                  JSON.stringify({
+                    status: 201,
+                    type: 'CHAT',
+                    result: {
+                      receiver,
+                    },
+                  })
+                )
               );
 
               if (clients[receiver]) {
                 clients[receiver].forEach((item) =>
-                  item.sendUTF(JSON.stringify({ status: 201 }))
+                  item.sendUTF(JSON.stringify({ status: 201, type: 'CHAT' }))
                 );
               }
             } else {
