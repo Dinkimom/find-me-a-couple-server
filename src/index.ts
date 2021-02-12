@@ -168,8 +168,25 @@ wsServer.on('request', function (request: any) {
               );
 
               if (clients[receiver]) {
+                const usersCollection = getCollection(EntityEnum.Users);
+
+                const userData = await usersCollection.findOne({
+                  _id: new ObjectId(user),
+                });
+
+                delete userData.password;
+
                 clients[receiver].forEach((item) =>
-                  item.sendUTF(JSON.stringify({ status: 201, type: 'CHAT' }))
+                  item.sendUTF(
+                    JSON.stringify({
+                      status: 201,
+                      type: 'NEW_MESSAGE',
+                      result: {
+                        user: userData,
+                        message: data.payload.message,
+                      },
+                    })
+                  )
                 );
               }
             } else {
