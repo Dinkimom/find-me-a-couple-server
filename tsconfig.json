@@ -73,7 +73,8 @@
       "@enums/*": ["src/enums/*"],
       "@middleware/*": ["src/middleware/*"],
       "@utils/*": ["src/utils/*"],
-      "@types/*": ["src/types/*"]
+      "@types/*": ["src/types/*"],
+      "@socket/*": ["src/socket/*"]
     }
   },
   "include": ["src/**/*.ts", "spec/**/*.ts"],

@@ -1,10 +1,7 @@
 import './pre-start'; // Must be the first import
-import { MessageDto } from '@dtos/MessageDto';
-import { EntityEnum } from '@enums/EntityEnum';
 import app from '@server';
 import logger from '@shared/Logger';
-import { getCollection } from '@utils/getCollection';
-import { ObjectId } from 'mongodb';
+import { rootReducer } from './socket';
 
 // Start the server
 const port = Number(process.env.PORT || 5000);
@@ -26,7 +23,7 @@ function originIsAllowed(origin: string) {
   return true;
 }
 
-const clients: { [key: string]: any[] } = {};
+export const clients: { [key: string]: any[] } = {};
 
 wsServer.on('request', function (request: any) {
   if (!originIsAllowed(request.origin)) {
@@ -38,168 +35,11 @@ wsServer.on('request', function (request: any) {
 
   const connection = request.accept('echo-protocol', request.origin);
 
-  connection.on('message', async function (message: any) {
+  connection.on('message', function (message: any) {
     if (message.type === 'utf8') {
-      const data: {
-        user_id: string;
-        type: 'GET' | 'POST' | 'INIT';
-        payload: {
-          receiver: string;
-          message: MessageDto;
-        };
-      } = JSON.parse(message.utf8Data);
+      const action: any = JSON.parse(message.utf8Data);
 
-      const { user_id } = data;
-
-      switch (data.type) {
-        case 'INIT':
-          {
-            if (!clients[user_id]) {
-              clients[user_id] = [];
-            }
-
-            clients[user_id].push(connection);
-          }
-          break;
-
-        case 'GET':
-          {
-            const { receiver } = data.payload;
-
-            if (receiver === user_id) {
-              return connection.sendUTF;
-            }
-
-            const collection = getCollection(EntityEnum.Chats);
-
-            let chat = await collection.findOne({
-              participants: { $all: [receiver, user_id] },
-            });
-
-            if (!chat) {
-              await collection.insertOne({
-                participants: [receiver, user_id],
-                messages: [],
-              });
-
-              chat = await collection.findOne({
-                participants: { $all: [receiver, user_id] },
-              });
-            }
-
-            const usersCollection = getCollection(EntityEnum.Users);
-
-            try {
-              const receiverId = new ObjectId(receiver);
-
-              const companion = await usersCollection.findOne({
-                _id: receiverId,
-              });
-
-              if (companion) {
-                clients[user_id].forEach((item) =>
-                  item.sendUTF(
-                    JSON.stringify({
-                      status: 200,
-                      result: {
-                        companion: {
-                          name: companion.name,
-                          image: companion.image,
-                        },
-                        lastMessage: chat.messages[chat.messages.length - 1],
-                        messages: chat.messages,
-                      },
-                    })
-                  )
-                );
-              } else {
-                clients[user_id].forEach((item) =>
-                  item.sendUTF(JSON.stringify({ status: 404 }))
-                );
-              }
-            } catch {
-              clients[user_id].forEach((item) =>
-                item.sendUTF(JSON.stringify({ status: 404 }))
-              );
-            }
-          }
-
-          break;
-        case 'POST':
-          {
-            const { receiver } = data.payload;
-
-            const user = String(user_id);
-
-            const collection = getCollection(EntityEnum.Chats);
-
-            const chat = (
-              await collection
-                .find({ participants: { $all: [receiver, user] } })
-                .toArray()
-            )[0];
-
-            if (!clients[user]) {
-              clients[user_id] = [];
-
-              clients[user_id].push(connection);
-            }
-
-            if (chat) {
-              const { messages } = chat;
-
-              messages.push({ user_id: user, ...data.payload.message });
-
-              collection.updateOne(
-                { participants: { $all: [receiver, user] } },
-                { $set: { messages } }
-              );
-
-              clients[user_id].forEach((item) =>
-                item.sendUTF(
-                  JSON.stringify({
-                    status: 201,
-                    type: 'CHAT',
-                    result: {
-                      receiver,
-                    },
-                  })
-                )
-              );
-
-              if (clients[receiver]) {
-                const usersCollection = getCollection(EntityEnum.Users);
-
-                const userData = await usersCollection.findOne({
-                  _id: new ObjectId(user),
-                });
-
-                delete userData.password;
-
-                clients[receiver].forEach((item) =>
-                  item.sendUTF(
-                    JSON.stringify({
-                      status: 201,
-                      type: 'NEW_MESSAGE',
-                      result: {
-                        user: userData,
-                        message: data.payload.message,
-                      },
-                    })
-                  )
-                );
-              }
-            } else {
-              clients[user_id].forEach((item) =>
-                item.sendUTF(JSON.stringify({ status: 404 }))
-              );
-            }
-          }
-          break;
-
-        default:
-          connection.sendUTF(message.utf8Data);
-      }
+      rootReducer(action, connection);
     }
   });
 
@@ -209,9 +49,5 @@ wsServer.on('request', function (request: any) {
 
       delete clients[data.user_id];
     }
-
-    console.log(
-      new Date() + ' Peer ' + connection.remoteAddress + ' disconnected.'
-    );
   });
 });
