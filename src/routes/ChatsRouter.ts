@@ -85,7 +85,7 @@ chatsRouter.get('/:receiver', async (req: Request, res: Response) => {
     if (user) {
       res.status(200).send({
         result: {
-          companion: { name: user.name, image: user.image },
+          companion: { _id: user._id, name: user.name, image: user.image },
           lastMessage: chat.messages[chat.messages.length - 1],
           messages: chat.messages,
         },

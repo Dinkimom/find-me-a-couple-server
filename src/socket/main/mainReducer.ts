@@ -1,5 +1,5 @@
-import { SocketReducer } from 'src/socket/SocketReducer';
 import { clients } from 'src';
+import { SocketReducer } from 'src/socket/SocketReducer';
 import { MainActionType } from './MainActionType';
 
 export const mainReducer: SocketReducer<MainActionType> = (
@@ -10,10 +10,13 @@ export const mainReducer: SocketReducer<MainActionType> = (
 
   switch (action.type) {
     case MainActionType.INIT:
-      if (!clients[user_id]) {
-        clients[user_id] = [];
-      }
+      {
+        if (!clients[user_id]) {
+          clients[user_id] = [];
+        }
 
-      clients[user_id].push(connection);
+        clients[user_id].push(connection);
+      }
+      break;
   }
 };

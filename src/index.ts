@@ -42,12 +42,4 @@ wsServer.on('request', function (request: any) {
       rootReducer(action, connection);
     }
   });
-
-  connection.on('close', function (message: any) {
-    if (message.type === 'utf8') {
-      const data = JSON.parse(message.utf8Data);
-
-      delete clients[data.user_id];
-    }
-  });
 });
