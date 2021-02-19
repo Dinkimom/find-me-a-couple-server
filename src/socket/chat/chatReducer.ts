@@ -1,10 +1,9 @@
 import { UsersStateDto } from '@dtos/UsersStateDto';
 import { EntityEnum } from '@enums/EntityEnum';
 import { UsersStateEnum } from '@enums/UserStateEnum';
-import { closeOrAct } from '@utils/closeOrAct';
 import { getCollection } from '@utils/getCollection';
 import { ObjectId } from 'mongodb';
-import { clients } from 'src';
+import { clientsControl } from 'src';
 import { SocketReducer } from 'src/socket/SocketReducer';
 import { mainActions } from '../main/actions';
 import { chatActions } from './chatActions';
@@ -31,12 +30,6 @@ export const chatReducer: SocketReducer<ChatActionType> = async (
             .toArray()
         )[0];
 
-        if (!clients[user]) {
-          clients[user_id] = [];
-
-          clients[user_id].push(connection);
-        }
-
         if (chat) {
           const { messages } = chat;
 
@@ -49,33 +42,25 @@ export const chatReducer: SocketReducer<ChatActionType> = async (
             { $set: { messages } }
           );
 
-          clients[user_id].forEach((item, index) => {
-            closeOrAct(user_id, item, index, () =>
-              item.sendUTF(chatActions.updateChat(newMessage))
-            );
+          clientsControl.sendMessage(
+            user_id,
+            chatActions.updateChat(newMessage)
+          );
+
+          const usersCollection = getCollection(EntityEnum.Users);
+
+          const userData = await usersCollection.findOne({
+            _id: new ObjectId(user),
           });
 
-          if (clients[receiver]) {
-            const usersCollection = getCollection(EntityEnum.Users);
+          delete userData.password;
 
-            const userData = await usersCollection.findOne({
-              _id: new ObjectId(user),
-            });
-
-            delete userData.password;
-
-            clients[receiver].forEach((item, index) => {
-              closeOrAct(receiver, item, index, () =>
-                item.sendUTF(chatActions.messageReceived(userData, newMessage))
-              );
-            });
-          }
+          clientsControl.sendMessage(
+            receiver,
+            chatActions.messageReceived(userData, newMessage)
+          );
         } else {
-          clients[user_id].forEach((item, index) => {
-            closeOrAct(user_id, item, index, () =>
-              item.sendUTF(mainActions.notFound())
-            );
-          });
+          clientsControl.sendMessage(user_id, mainActions.notFound());
         }
       }
       break;
@@ -88,29 +73,32 @@ export const chatReducer: SocketReducer<ChatActionType> = async (
         const usersState: UsersStateDto = {};
 
         users.forEach((item: string) => {
-          usersState[item] =
-            clients[item] && clients[item].length
-              ? UsersStateEnum.ONLINE
-              : UsersStateEnum.OFFLINE;
+          usersState[item] = clientsControl.getClientState(item);
         });
 
-        clients[user_id].forEach((item, index) => {
-          closeOrAct(user_id, item, index, () =>
-            item.sendUTF(chatActions.updateUsers(usersState))
-          );
-        });
+        clientsControl.sendMessage(
+          user_id,
+          chatActions.updateUsers(usersState)
+        );
 
         users.forEach((companion_id: string) => {
-          if (clients[companion_id]) {
-            clients[companion_id].forEach((item, index) => {
-              closeOrAct(companion_id, item, index, () =>
-                chatActions.updateUsers({ [user_id]: UsersStateEnum.ONLINE })
-              );
-            });
-          }
+          clientsControl.sendMessage(
+            companion_id,
+            chatActions.updateUsers({ [user_id]: UsersStateEnum.ONLINE })
+          );
         });
       }
+      break;
 
+    case ChatActionType.TYPING_STATUS:
+      {
+        const { receiver, status } = action.payload;
+
+        clientsControl.sendMessage(
+          receiver,
+          chatActions.updateUsersTypingState({ [user_id]: status })
+        );
+      }
       break;
   }
 };

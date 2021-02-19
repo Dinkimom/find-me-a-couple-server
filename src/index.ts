@@ -2,6 +2,7 @@ import './pre-start'; // Must be the first import
 import app from '@server';
 import logger from '@shared/Logger';
 import { rootReducer } from './socket';
+import { ClientsControl } from '@socket/clientsControl/ClientsControl';
 
 // Start the server
 const port = Number(process.env.PORT || 5000);
@@ -23,7 +24,7 @@ function originIsAllowed(origin: string) {
   return true;
 }
 
-export const clients: { [key: string]: any[] } = {};
+export const clientsControl = new ClientsControl();
 
 wsServer.on('request', function (request: any) {
   if (!originIsAllowed(request.origin)) {
