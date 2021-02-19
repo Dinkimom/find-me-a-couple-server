@@ -1,4 +1,4 @@
-import { clientsControl } from 'src';
+import { clientsControl } from '@socket/clientsControl';
 import { SocketReducer } from 'src/socket/SocketReducer';
 import { MainActionType } from './MainActionType';
 

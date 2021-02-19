@@ -3,11 +3,11 @@ import { EntityEnum } from '@enums/EntityEnum';
 import { UsersStateEnum } from '@enums/UserStateEnum';
 import { getCollection } from '@utils/getCollection';
 import { ObjectId } from 'mongodb';
-import { clientsControl } from 'src';
-import { SocketReducer } from 'src/socket/SocketReducer';
+import { SocketReducer } from '@socket/SocketReducer';
 import { mainActions } from '../main/actions';
 import { chatActions } from './chatActions';
 import { ChatActionType } from './ChatActionType';
+import { clientsControl } from '@socket/clientsControl';
 
 export const chatReducer: SocketReducer<ChatActionType> = async (
   action,
